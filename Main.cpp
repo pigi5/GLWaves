@@ -6,35 +6,41 @@
 #include <iostream>
 
 /** These are the live variables passed into GLUI ***/
-int  wireframe = 1;
-int  fill = 1;
-int  normal = 0;
-int  lods = 4;
-int  layers = 2;
-int	 rotX = 0;
-int	 rotY = 0;
-int	 rotZ = 0;
-int  scale = 50;
+int wireframe = 1;
+int fill = 1;
+int normal = 0;
+int lods = 4;
+int layers = 2;
 
-int	 camRotU = 0;
-int	 camRotV = 0;
-int	 camRotW = 0;
-int  viewAngle = 45;
-float eyeX = 1000;
-float eyeY = 500;
-float eyeZ = 1000;
-float lookX = -2;
+int viewAngle = 45;
+float eyeX = 0;
+float eyeY = 32;
+float eyeZ = 68;
+float lookX = 0;
 float lookY = -.5;
-float lookZ = -2;
+float lookZ = -1;
 float clipNear = 0.001;
-float clipFar = 10000;
+float clipFar = 1000;
 
+int wavesR = 78;
+int wavesG = 112;
+int wavesB = 159;
+int wavesA = 225;
+int lightR = 255;
+int lightG = 255;
+int lightB = 255;
+float dayTime = 14.5;
+int compassDir = 260;
 
-int  main_window;
+float timeSince = 0;
+int pause = 0; 
+int useFFT = 1; 
+
+int main_window;
 
 
 /** these are the global variables used for rendering **/
-FFTWaves* shape = new FFTWaves(64, 0.0005f, Vector2(0.0f,32.0f), 64, false);
+FFTWaves* shape = new FFTWaves(64, 0.00005f, Vector2(0.0f,32.0f), 64);
 Camera* camera = new Camera();
 
 /***************************************** myGlutIdle() ***********/
@@ -69,7 +75,15 @@ void myGlutReshape(int x, int y)
 
 void myGlutDisplay(void)
 {
-    float timeSince = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+    if (!pause) {
+        timeSince = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+    }
+    
+    GLfloat diffuse[] = {lightR / 255.0f, lightG / 255.0f, lightB / 255.0f, 0.0f};
+    float distance = 1000.0f;
+    GLfloat light_pos0[] = {distance * sin((dayTime - 12) * 2 * PI / 12.0) * cos(DEG_TO_RAD(compassDir)), distance * cos((dayTime - 12) * 2 * PI / 12.0), distance * sin((dayTime - 12) * 2 * PI / 12.0) * sin(DEG_TO_RAD(compassDir)), 0.0f};
+    glLightfv (GL_LIGHT0, GL_DIFFUSE, diffuse);
+    glLightfv (GL_LIGHT0, GL_POSITION, light_pos0);
 
 	glClearColor(.9f, .9f, .9f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -82,7 +96,6 @@ void myGlutDisplay(void)
 	Matrix projection = camera->GetProjectionMatrix();
 	glMultMatrixd(projection.unpack());
 
-
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
@@ -90,54 +103,30 @@ void myGlutDisplay(void)
 	Vector lookV(lookX, lookY, lookZ);
 	Vector upV(0, 1, 0);
 	camera->Orient(eyeP, lookV, upV);
-	camera->RotateV(camRotV);
-	camera->RotateU(camRotU);
-	camera->RotateW(camRotW);
 	Matrix modelView = camera->GetModelViewMatrix();
 	glMultMatrixd(modelView.unpack());
-
-	//rotate object
-	glRotatef(rotX, 1.0, 0.0, 0.0);
-	glRotatef(rotY, 0.0, 1.0, 0.0);
-	glRotatef(rotZ, 0.0, 0.0, 1.0);
-
-	//drawing the axes
-    glDisable(GL_LIGHTING);
-	glBegin(GL_LINES);
-	glColor3f(1.0, 0.0, 0.0);
-	glVertex3f(0, 0, 0); glVertex3f(1.0, 0, 0);
-	glColor3f(0.0, 1.0, 0.0);
-	glVertex3f(0, 0, 0); glVertex3f(0.0, 1.0, 0);
-	glColor3f(0.0, 0.0, 1.0);
-	glVertex3f(0, 0, 0); glVertex3f(0, 0, 1.0);
-	glEnd();
-
-	//scale object
-	glScalef(scale, scale, scale);
-
-	if (normal) {
-		glColor3f(1.0, 0.0, 0.0);
-		shape->drawNormal(timeSince);
-	}
-
-    glEnable(GL_LIGHTING);
+    
+    shape->update(timeSince, useFFT);
 	if (fill) {
 		glEnable(GL_POLYGON_OFFSET_FILL);
-		glColor3f(0.5, 0.5, 0.5);
+		glColor4f(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		shape->draw(timeSince, true);
+		shape->draw();
 	}
 	
+	glDisable(GL_LIGHTING);
 	if (wireframe) {
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		glColor3f(0.0, 0.0, 0.0);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		shape->draw(timeSince, true);
+		shape->draw();
 	}
 
-	camera->RotateV(-camRotV);
-	camera->RotateU(-camRotU);
-	camera->RotateW(-camRotW);
+	if (normal) {
+		glColor3f(1.0, 0.0, 0.0);
+		shape->drawNormal();
+	}
+	glEnable(GL_LIGHTING);
 
 	glutSwapBuffers();
 }
@@ -172,23 +161,26 @@ int main(int argc, char* argv[])
 	/****************************************/
 
 
-	    glClearColor (0.38, 0.38, 0.38, 0.0);
-        glShadeModel (GL_SMOOTH);
+	glClearColor (0.0f, 0.0f, 0.0f, 0.0f);
+    glShadeModel (GL_SMOOTH);
 
-        GLfloat light_pos0[] = {1000.0f, 1000.0f, 1000.0f, 0.0f};
-        GLfloat diffuse[] = {0.5f, 0.5f, 0.5f, 0.0f};
-        GLfloat ambient[] = {0.1f, 0.1f, 0.1f, 1.0f};
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
 
-        glLightfv (GL_LIGHT0, GL_AMBIENT, ambient);
-        glLightfv (GL_LIGHT0, GL_DIFFUSE, diffuse);
-        glLightfv (GL_LIGHT0, GL_POSITION, light_pos0);
+    GLfloat light_pos0[] = {100.0f, 100.0f, 100.0f, 0.0f};
+    glLightfv (GL_LIGHT0, GL_POSITION, light_pos0);
+    
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_shininess[] = { 100.0 };
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+    
+    glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+    glEnable(GL_COLOR_MATERIAL);
 
-        glColorMaterial (GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-        glEnable (GL_COLOR_MATERIAL);
-
-        glEnable(GL_LIGHTING);
-        glEnable (GL_LIGHT0);
-        glEnable (GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable (GL_LIGHT0);
+    glEnable (GL_DEPTH_TEST);
 
 	///****************************************/
 	///*          Enable z-buferring          */
@@ -209,18 +201,14 @@ int main(int argc, char* argv[])
 	new GLUI_Checkbox(render_panel, "Wireframe", &wireframe);
 	new GLUI_Checkbox(render_panel, "Fill", &fill);
 	new GLUI_Checkbox(render_panel, "Normal", &normal);
+	new GLUI_Checkbox(render_panel, "Use FFT", &useFFT);
+	new GLUI_Checkbox(render_panel, "Pause", &pause);
 	(new GLUI_Spinner(render_panel, "Num LODs:", &lods))
 		->set_int_limits(1, 10);
 	(new GLUI_Spinner(render_panel, "Num Layers:", &layers))
 		->set_int_limits(1, 10);
 
 	GLUI_Panel *camera_panel = glui->add_panel("Camera");
-	(new GLUI_Spinner(camera_panel, "RotateV:", &camRotV))
-		->set_int_limits(-179, 179);
-	(new GLUI_Spinner(camera_panel, "RotateU:", &camRotU))
-		->set_int_limits(-179, 179);
-	(new GLUI_Spinner(camera_panel, "RotateW:", &camRotW))
-		->set_int_limits(-179, 179);
 	(new GLUI_Spinner(camera_panel, "Angle:", &viewAngle))
 		->set_int_limits(1, 179);
 
@@ -245,16 +233,25 @@ int main(int argc, char* argv[])
 
 	glui->add_column(true);
 
-
-	GLUI_Panel *object_panel = glui->add_panel("Object");
-	(new GLUI_Spinner(object_panel, "Rotate X:", &rotX))
+	GLUI_Panel *object_panel = glui->add_panel("Light & Color");
+	(new GLUI_Spinner(object_panel, "Waves R:", &wavesR))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Waves G:", &wavesG))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Waves B:", &wavesB))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Waves A:", &wavesA))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Light R:", &lightR))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Light G:", &lightG))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Light B:", &lightB))
+		->set_int_limits(0, 255);
+	(new GLUI_Spinner(object_panel, "Time:", &dayTime))
+		->set_float_limits(0, 24);
+	(new GLUI_Spinner(object_panel, "Compass:", &compassDir))
 		->set_int_limits(0, 359);
-	(new GLUI_Spinner(object_panel, "Rotate Y:", &rotY))
-		->set_int_limits(0, 359);
-	(new GLUI_Spinner(object_panel, "Rotate Z:", &rotZ))
-		->set_int_limits(0, 359);
-	(new GLUI_Spinner(object_panel, "Scale:", &scale))
-		->set_int_limits(1, 100);
 
 	glui->add_button("Quit", 0, (GLUI_Update_CB)exit);
 

@@ -1,9 +1,9 @@
 #include "FFTWaves.h"
 #include <iostream>
 
-FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float length, const bool geometry) :
-    g(9.81), geometry(geometry), N(N), Nplus1(N+1), A(A), w(w), length(length),
-    vertices(0), indices(0), h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0), h_tilde_dx(0), h_tilde_dz(0), fft(0)
+FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float length) :
+    g(9.81), period(30.0f), N(N), Nplus1(N+1), A(A), w(w), length(length), vertices(0), indices(0), 
+    h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0), h_tilde_dx(0), h_tilde_dz(0), fft(0)
 {
     h_tilde        = new Complex[N*N];
     h_tilde_slopex = new Complex[N*N];
@@ -33,9 +33,7 @@ FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float leng
             vertices[index].originalPos.y = vertices[index].vertex.y =  0.0f;
             vertices[index].originalPos.z = vertices[index].vertex.z =  (m_prime - N / 2.0f) * length / N;
  
-            vertices[index].normal.x = 0.0f;
-            vertices[index].normal.y = 1.0f;
-            vertices[index].normal.z = 0.0f;
+            vertices[index].normal = Vector3(0.0f, 1.0f, 0.0f);
         }
     }
  
@@ -43,30 +41,13 @@ FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float leng
     for (int m_prime = 0; m_prime < N; m_prime++) {
         for (int n_prime = 0; n_prime < N; n_prime++) {
             index = m_prime * Nplus1 + n_prime;
- 
-            if (geometry) {
-                indices[indices_count++] = index;               // lines
-                indices[indices_count++] = index + 1;
-                indices[indices_count++] = index;
-                indices[indices_count++] = index + Nplus1;
-                indices[indices_count++] = index;
-                indices[indices_count++] = index + Nplus1 + 1;
-                if (n_prime == N - 1) {
-                    indices[indices_count++] = index + 1;
-                    indices[indices_count++] = index + Nplus1 + 1;
-                }
-                if (m_prime == N - 1) {
-                    indices[indices_count++] = index + Nplus1;
-                    indices[indices_count++] = index + Nplus1 + 1;
-                }
-            } else {
-                indices[indices_count++] = index;               // two triangles
-                indices[indices_count++] = index + Nplus1;
-                indices[indices_count++] = index + Nplus1 + 1;
-                indices[indices_count++] = index;
-                indices[indices_count++] = index + Nplus1 + 1;
-                indices[indices_count++] = index + 1;
-            }
+
+            indices[indices_count++] = index;               // two triangles
+            indices[indices_count++] = index + Nplus1;
+            indices[indices_count++] = index + Nplus1 + 1;
+            indices[indices_count++] = index;
+            indices[indices_count++] = index + Nplus1 + 1;
+            indices[indices_count++] = index + 1;
         }
     }
 }
@@ -83,7 +64,7 @@ FFTWaves::~FFTWaves() {
 }
 
 float FFTWaves::dispersion(int n_prime, int m_prime) {
-    float w_0 = 2.0f * PI / 200.0f;
+    float w_0 = 2.0f * PI / period;
     float kx = PI * (2 * n_prime - N) / length;
     float kz = PI * (2 * m_prime - N) / length;
     return floor(sqrt(g * sqrt(kx * kx + kz * kz)) / w_0) * w_0;
@@ -130,9 +111,7 @@ Complex FFTWaves::hTilde(float t, int n_prime, int m_prime) {
     Complex c0(cos_,  sin_);
     Complex c1(cos_, -sin_);
  
-    Complex res = htilde0 * c0 + htilde0mkconj * c1;
- 
-    return htilde0 * c0 + htilde0mkconj*c1;
+    return htilde0 * c0 + htilde0mkconj * c1;
 }
 
 HeightDispNorm FFTWaves::h_D_and_n(Vector2 x, float t) {
@@ -271,10 +250,8 @@ void FFTWaves::evaluateWavesFFT(float t) {
             // normal
             h_tilde_slopex[index] = h_tilde_slopex[index] * sign;
             h_tilde_slopez[index] = h_tilde_slopez[index] * sign;
-            n = Vector3(0.0f - h_tilde_slopex[index].real, 1.0f, 0.0f - h_tilde_slopez[index].real).unit();
-            vertices[index1].normal.x =  n.x;
-            vertices[index1].normal.y =  n.y;
-            vertices[index1].normal.z =  n.z;
+            n = Vector3(-h_tilde_slopex[index].real, 1.0f, -h_tilde_slopez[index].real).unit();
+            vertices[index1].normal = n;
  
             // for tiling
             if (n_prime == 0 && m_prime == 0) {
@@ -283,9 +260,7 @@ void FFTWaves::evaluateWavesFFT(float t) {
                 vertices[index1 + N + Nplus1 * N].vertex.x = vertices[index1 + N + Nplus1 * N].originalPos.x + h_tilde_dx[index].real * lambda;
                 vertices[index1 + N + Nplus1 * N].vertex.z = vertices[index1 + N + Nplus1 * N].originalPos.z + h_tilde_dz[index].real * lambda;
              
-                vertices[index1 + N + Nplus1 * N].normal.x =  n.x;
-                vertices[index1 + N + Nplus1 * N].normal.y =  n.y;
-                vertices[index1 + N + Nplus1 * N].normal.z =  n.z;
+                vertices[index1 + N + Nplus1 * N].normal = n;
             }
             if (n_prime == 0) {
                 vertices[index1 + N].vertex.y = h_tilde[index].real;
@@ -293,9 +268,7 @@ void FFTWaves::evaluateWavesFFT(float t) {
                 vertices[index1 + N].vertex.x = vertices[index1 + N].originalPos.x + h_tilde_dx[index].real * lambda;
                 vertices[index1 + N].vertex.z = vertices[index1 + N].originalPos.z + h_tilde_dz[index].real * lambda;
              
-                vertices[index1 + N].normal.x =  n.x;
-                vertices[index1 + N].normal.y =  n.y;
-                vertices[index1 + N].normal.z =  n.z;
+                vertices[index1 + N].normal = n;
             }
             if (m_prime == 0) {
                 vertices[index1 + Nplus1 * N].vertex.y = h_tilde[index].real;
@@ -303,28 +276,38 @@ void FFTWaves::evaluateWavesFFT(float t) {
                 vertices[index1 + Nplus1 * N].vertex.x = vertices[index1 + Nplus1 * N].originalPos.x + h_tilde_dx[index].real * lambda;
                 vertices[index1 + Nplus1 * N].vertex.z = vertices[index1 + Nplus1 * N].originalPos.z + h_tilde_dz[index].real * lambda;
              
-                vertices[index1 + Nplus1 * N].normal.x =  n.x;
-                vertices[index1 + Nplus1 * N].normal.y =  n.y;
-                vertices[index1 + Nplus1 * N].normal.z =  n.z;
+                vertices[index1 + Nplus1 * N].normal = n;
             }
         }
     }
 }
 
-void FFTWaves::draw(float t, bool use_fft) {
-    if (!use_fft) {
-        evaluateWaves(t);
-    } else if (use_fft) {
+void FFTWaves::update(float t, bool use_fft) {
+    if (use_fft) {
         evaluateWavesFFT(t);
+    } else {
+        evaluateWaves(t);
     }
- 
-    glBegin(geometry? GL_LINES : GL_TRIANGLES);
-    for (int i = 0; i < indices_count; i++) {
-	    glNormal3f(vertices[indices[i]].normal.x, vertices[indices[i]].normal.y, vertices[indices[i]].normal.z);
-	    glVertex3f(vertices[indices[i]].vertex.x, vertices[indices[i]].vertex.y, vertices[indices[i]].vertex.z);
+}
+
+void FFTWaves::draw() { 
+    glBegin(GL_TRIANGLES);
+    for (int x = 0; x < 1; x++) {
+        for (int z = 0; z < 1; z++) {
+            for (int i = 0; i < indices_count; i++) {
+	            glNormal3f(vertices[indices[i]].normal.x, vertices[indices[i]].normal.y, vertices[indices[i]].normal.z);
+	            glVertex3f(vertices[indices[i]].vertex.x + length * x, vertices[indices[i]].vertex.y, vertices[indices[i]].vertex.z + length * z);
+            }
+        }
     }
     glEnd();
 }
 
-void FFTWaves::drawNormal(float t) {
+void FFTWaves::drawNormal() {
+    glBegin(GL_LINES);
+    for (int i = 0; i < Nplus1 * Nplus1; i++) {
+	    glVertex3f(vertices[i].vertex.x, vertices[i].vertex.y, vertices[i].vertex.z);
+	    glVertex3f(vertices[i].vertex.x + vertices[i].normal.x, vertices[i].vertex.y + vertices[i].normal.y, vertices[i].vertex.z + vertices[i].normal.z);
+    }
+    glEnd();
 }

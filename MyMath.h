@@ -2,6 +2,7 @@
 #define MYMATH_H
 
 #include <math.h>
+#include <algorithm>
 #include "GL/glut.h"
 
 #define PI 3.1415926535897932384626433832795028841971693993751058209749445923
@@ -165,14 +166,11 @@ public:
     }
 
     Vector3 unit() {
-        Vector3 t;
-        GLfloat len = length();
+        double len = length();
         if (len != 0) {
-            t.x = x / len;
-            t.y = y / len;
-            t.z = z / len;
+            return Vector3(x / len, y / len, z / len);
         }
-        return t;
+        return Vector3();
     }
 };
 
@@ -224,11 +222,11 @@ struct HeightDispNorm {
     }
 };
 
-
+// taken from Lantz's helper classes
 inline float uniformRandomVariable() {
 	return (float)rand()/RAND_MAX;
 }
-
+// taken from Lantz's helper classes
 inline Complex gaussianRandomVariable() {
 	float x1, x2, w;
 	do {
@@ -238,6 +236,10 @@ inline Complex gaussianRandomVariable() {
 	} while ( w >= 1.f );
 	w = sqrt((-2.f * log(w)) / w);
 	return Complex(x1 * w, x2 * w);
+}
+
+inline float clamp(const float& num, const float& min, const float& max) {
+    return std::max(min, std::min(num, max));
 }
 
 #endif

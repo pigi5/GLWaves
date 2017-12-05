@@ -13,11 +13,10 @@ CSI 4341: Assignment 2: Camera
 
 class FFTWaves {
 private:
-    bool geometry;                          // flag to render geometry or surface
- 
     float g;                                // gravity constant
     int N, Nplus1;                          // dimension -- N should be a power of 2
     float A;                                // phillips spectrum parameter -- affects heights of waves
+    float period;                           // time until repeat
     Vector2 w;                              // wind parameter
     float length;                           // length parameter
     Complex *h_tilde,                       // for fast fourier transform
@@ -35,7 +34,7 @@ private:
  
 protected:
 public:
-    FFTWaves(const int N, const float A, const Vector2 w, const float length, bool geometry);
+    FFTWaves(const int N, const float A, const Vector2 w, const float length);
     ~FFTWaves();
  
     float dispersion(int n_prime, int m_prime);     // deep water
@@ -45,8 +44,9 @@ public:
     HeightDispNorm h_D_and_n(Vector2 x, float t);
     void evaluateWaves(float t);
     void evaluateWavesFFT(float t);
-    void draw(float t, bool use_fft);
-    void drawNormal(float t);
+    void update(float t, bool use_fft);
+    void draw();
+    void drawNormal();
 };
 
 #endif
