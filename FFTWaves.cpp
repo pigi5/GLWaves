@@ -2,7 +2,7 @@
 #include <iostream>
 
 FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float length) :
-    g(9.81), period(30.0f), N(N), Nplus1(N+1), A(A), w(w), length(length), vertices(0), indices(0), 
+    g(9.81), period(200.0f), N(N), A(A), w(w), length(length), facetLength(length / N), vertices(0),
     h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0), h_tilde_dx(0), h_tilde_dz(0), fft(0)
 {
     h_tilde        = new Complex[N*N];
@@ -11,43 +11,23 @@ FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float leng
     h_tilde_dx     = new Complex[N*N];
     h_tilde_dz     = new Complex[N*N];
     fft            = new FFT(N);
-    vertices       = new WaveVertex[Nplus1*Nplus1];
-    indices        = new unsigned int[Nplus1*Nplus1*10];
+    vertices       = new WaveVertex[N*N];
  
     int index;
  
     Complex htilde0, htilde0mk_conj;
-    for (int m_prime = 0; m_prime < Nplus1; m_prime++) {
-        for (int n_prime = 0; n_prime < Nplus1; n_prime++) {
-            index = m_prime * Nplus1 + n_prime;
- 
-            htilde0        = hTilde_0( n_prime,  m_prime);
-            htilde0mk_conj = hTilde_0(-n_prime, -m_prime).conj();
- 
-            vertices[index].hTilde0.x  = htilde0.real;
-            vertices[index].hTilde0.y  = htilde0.imaginary;
-            vertices[index].hTilde0star.x = htilde0mk_conj.real;
-            vertices[index].hTilde0star.y = htilde0mk_conj.imaginary;
- 
-            vertices[index].originalPos.x = vertices[index].vertex.x =  (n_prime - N / 2.0f) * length / N;
-            vertices[index].originalPos.y = vertices[index].vertex.y =  0.0f;
-            vertices[index].originalPos.z = vertices[index].vertex.z =  (m_prime - N / 2.0f) * length / N;
- 
-            vertices[index].normal = Vector3(0.0f, 1.0f, 0.0f);
-        }
-    }
- 
-    indices_count = 0;
     for (int m_prime = 0; m_prime < N; m_prime++) {
         for (int n_prime = 0; n_prime < N; n_prime++) {
-            index = m_prime * Nplus1 + n_prime;
-
-            indices[indices_count++] = index;               // two triangles
-            indices[indices_count++] = index + Nplus1;
-            indices[indices_count++] = index + Nplus1 + 1;
-            indices[indices_count++] = index;
-            indices[indices_count++] = index + Nplus1 + 1;
-            indices[indices_count++] = index + 1;
+            index = m_prime * N + n_prime;
+ 
+            vertices[index].hTilde0 = hTilde_0( n_prime,  m_prime);
+            vertices[index].hTilde0star = hTilde_0(-n_prime, -m_prime).conj();
+ 
+            vertices[index].originalPos.x = vertices[index].vertex.x =  n_prime * facetLength;
+            vertices[index].originalPos.y = vertices[index].vertex.y =  0.0f;
+            vertices[index].originalPos.z = vertices[index].vertex.z =  m_prime * facetLength;
+ 
+            vertices[index].normal = Vector3(0.0f, 1.0f, 0.0f);
         }
     }
 }
@@ -60,7 +40,6 @@ FFTWaves::~FFTWaves() {
     if (h_tilde_dz)     delete [] h_tilde_dz;
     if (fft)            delete fft;
     if (vertices)       delete [] vertices;
-    if (indices)        delete [] indices;
 }
 
 float FFTWaves::dispersion(int n_prime, int m_prime) {
@@ -98,10 +77,7 @@ Complex FFTWaves::hTilde_0(int n_prime, int m_prime) {
 }
  
 Complex FFTWaves::hTilde(float t, int n_prime, int m_prime) {
-    int index = m_prime * Nplus1 + n_prime;
- 
-    Complex htilde0(vertices[index].hTilde0.x, vertices[index].hTilde0.y);
-    Complex htilde0mkconj(vertices[index].hTilde0star.x, vertices[index].hTilde0star.y);
+    int index = m_prime * N + n_prime;
  
     float omegat = dispersion(n_prime, m_prime) * t;
  
@@ -111,7 +87,7 @@ Complex FFTWaves::hTilde(float t, int n_prime, int m_prime) {
     Complex c0(cos_,  sin_);
     Complex c1(cos_, -sin_);
  
-    return htilde0 * c0 + htilde0mkconj * c1;
+    return vertices[index].hTilde0 * c0 + vertices[index].hTilde0star * c1;
 }
 
 HeightDispNorm FFTWaves::h_D_and_n(Vector2 x, float t) {
@@ -150,46 +126,9 @@ HeightDispNorm FFTWaves::h_D_and_n(Vector2 x, float t) {
     return HeightDispNorm(h, D, n);
 }
 
-void alterWavePoint(const int& index, WaveVertex* vertices, const HeightDispNorm& heightDispNorm, const float& lambda) {
-    vertices[index].vertex.y = heightDispNorm.height.real;
-    
-    vertices[index].vertex.setXZ(vertices[index].originalPos, lambda * heightDispNorm.displacement);
- 
-    vertices[index].normal = heightDispNorm.normal;
-}
-
-void FFTWaves::evaluateWaves(float t) {
-    float lambda = -1.0;
-    int index;
-    Vector2 x;
-    Vector2 d;
-    HeightDispNorm h_d_and_n;
-    for (int m_prime = 0; m_prime < N; m_prime++) {
-        for (int n_prime = 0; n_prime < N; n_prime++) {
-            index = m_prime * Nplus1 + n_prime;
- 
-            x = Vector2(vertices[index].vertex);
- 
-            h_d_and_n = h_D_and_n(x, t);
- 
-            alterWavePoint(index, vertices, h_d_and_n, lambda);
- 
-            if (n_prime == 0 && m_prime == 0) {
-                alterWavePoint(index + N + Nplus1 * N, vertices, h_d_and_n, lambda);
-            }
-            if (n_prime == 0) {
-                alterWavePoint(index + N, vertices, h_d_and_n, lambda);
-            }
-            if (m_prime == 0) {
-                alterWavePoint(index + Nplus1 * N, vertices, h_d_and_n, lambda);
-            }
-        }
-    }
-}
-
 void FFTWaves::evaluateWavesFFT(float t) {
     float kx, kz, len, lambda = -1.0f;
-    int index, index1;
+    int index;
  
     for (int m_prime = 0; m_prime < N; m_prime++) {
         kz = PI * (2.0f * m_prime - N) / length;
@@ -231,83 +170,185 @@ void FFTWaves::evaluateWavesFFT(float t) {
     Vector3 n;
     for (int m_prime = 0; m_prime < N; m_prime++) {
         for (int n_prime = 0; n_prime < N; n_prime++) {
-            index  = m_prime * N + n_prime;         // index into h_tilde
-            index1 = m_prime * Nplus1 + n_prime;    // index into vertices
+            index  = m_prime * N + n_prime;
  
             sign = signs[(n_prime + m_prime) & 1];
  
             h_tilde[index] = h_tilde[index] * sign;
  
             // height
-            vertices[index1].vertex.y = h_tilde[index].real;
+            vertices[index].vertex.y = h_tilde[index].real;
  
             // displacement
             h_tilde_dx[index] = h_tilde_dx[index] * sign;
             h_tilde_dz[index] = h_tilde_dz[index] * sign;
-            vertices[index1].vertex.x = vertices[index1].originalPos.x + h_tilde_dx[index].real * lambda;
-            vertices[index1].vertex.z = vertices[index1].originalPos.z + h_tilde_dz[index].real * lambda;
+            vertices[index].vertex.x = vertices[index].originalPos.x + h_tilde_dx[index].real * lambda;
+            vertices[index].vertex.z = vertices[index].originalPos.z + h_tilde_dz[index].real * lambda;
              
             // normal
             h_tilde_slopex[index] = h_tilde_slopex[index] * sign;
             h_tilde_slopez[index] = h_tilde_slopez[index] * sign;
             n = Vector3(-h_tilde_slopex[index].real, 1.0f, -h_tilde_slopez[index].real).unit();
-            vertices[index1].normal = n;
- 
-            // for tiling
-            if (n_prime == 0 && m_prime == 0) {
-                vertices[index1 + N + Nplus1 * N].vertex.y = h_tilde[index].real;
- 
-                vertices[index1 + N + Nplus1 * N].vertex.x = vertices[index1 + N + Nplus1 * N].originalPos.x + h_tilde_dx[index].real * lambda;
-                vertices[index1 + N + Nplus1 * N].vertex.z = vertices[index1 + N + Nplus1 * N].originalPos.z + h_tilde_dz[index].real * lambda;
-             
-                vertices[index1 + N + Nplus1 * N].normal = n;
-            }
-            if (n_prime == 0) {
-                vertices[index1 + N].vertex.y = h_tilde[index].real;
- 
-                vertices[index1 + N].vertex.x = vertices[index1 + N].originalPos.x + h_tilde_dx[index].real * lambda;
-                vertices[index1 + N].vertex.z = vertices[index1 + N].originalPos.z + h_tilde_dz[index].real * lambda;
-             
-                vertices[index1 + N].normal = n;
-            }
-            if (m_prime == 0) {
-                vertices[index1 + Nplus1 * N].vertex.y = h_tilde[index].real;
- 
-                vertices[index1 + Nplus1 * N].vertex.x = vertices[index1 + Nplus1 * N].originalPos.x + h_tilde_dx[index].real * lambda;
-                vertices[index1 + Nplus1 * N].vertex.z = vertices[index1 + Nplus1 * N].originalPos.z + h_tilde_dz[index].real * lambda;
-             
-                vertices[index1 + Nplus1 * N].normal = n;
-            }
+            vertices[index].normal = n;
         }
     }
 }
 
-void FFTWaves::update(float t, bool use_fft) {
-    if (use_fft) {
-        evaluateWavesFFT(t);
-    } else {
-        evaluateWaves(t);
+void FFTWaves::update(float t) {
+    evaluateWavesFFT(t);
+}
+
+void FFTWaves::drawPoint(const float& x, const float& z) {
+    int n = floor(fmod(x, length) / facetLength);
+    float tile_x = floor(x / length) * length;
+
+    int m = floor(fmod(z, length) / facetLength);
+    float tile_z = floor(z / length) * length;
+
+    WaveVertex node = vertices[m * N + n];
+
+	glNormal3f(node.normal.x, node.normal.y, node.normal.z);
+	glVertex3f(node.vertex.x + tile_x, node.vertex.y, node.vertex.z + tile_z);
+}
+
+void FFTWaves::drawSquare(const float& x, const float& z, float size, signed char stitchX, signed char stitchZ) {
+    if (stitchX == 0 && stitchZ == 0) {   //   no stitching
+        drawPoint(x, z);                    // top left
+        drawPoint(x + size, z + size);      // bottom right
+        drawPoint(x + size, z);             // top right
+        drawPoint(x, z);                    // top left        
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size, z + size);      // bottom right
+    } else if (stitchX == -1) {           //   stitch left side
+        drawPoint(x, z);                    // top left
+        drawPoint(x, z + size / 2);         // middle left
+        drawPoint(x + size, z);             // top right
+        drawPoint(x + size, z);             // top right
+        drawPoint(x, z + size / 2);         // middle left
+        drawPoint(x + size, z + size);      // bottom right
+        drawPoint(x, z + size / 2);         // middle left      
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size, z + size);      // bottom right
+    } else if (stitchX == 1) {            //   stitch right side
+        drawPoint(x, z);                    // top left
+        drawPoint(x + size, z + size / 2);  // middle right
+        drawPoint(x + size, z);             // top right
+        drawPoint(x, z);                    // top left
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size, z + size / 2);  // middle right   
+        drawPoint(x + size, z + size / 2);  // middle right
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size, z + size);      // bottom right
+    } else if (stitchZ == -1) {           //   stitch top side
+        drawPoint(x, z);                    // top left
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size / 2, z);         // top middle
+        drawPoint(x + size / 2, z);         // top middle
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size, z + size);      // bottom right
+        drawPoint(x + size, z);             // top right
+        drawPoint(x + size / 2, z);         // top middle
+        drawPoint(x + size, z + size);      // bottom right
+    } else if (stitchZ == 1) {            //   stitch bottom side
+        drawPoint(x, z);                    // top left
+        drawPoint(x, z + size);             // bottom left
+        drawPoint(x + size / 2, z + size);  // bottom middle
+        drawPoint(x, z);                    // top left
+        drawPoint(x + size / 2, z + size);  // bottom middle
+        drawPoint(x + size, z);             // top right
+        drawPoint(x + size, z);             // top right
+        drawPoint(x + size / 2, z + size);  // bottom middle
+        drawPoint(x + size, z + size);      // bottom right
     }
 }
 
-void FFTWaves::draw() { 
+void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) {
+    unsigned short maxSize = pow(2, numLods - 1);
+    unsigned short finalStep = pow(2, lodLength + 1) - 1;
+    unsigned short stepRestart = pow(2, lodLength);
+    unsigned short maxStitches = stepRestart * 4;
+
+    int i;
+
+    signed char dir = -1;
+    unsigned short steps = 1;
+    unsigned short stepSize = 1;
+    
+    int disp_x = 0;
+    int disp_z = 0;
+
+    float loc_x = centerX;
+    float loc_z = centerZ;
+
+    unsigned short numStitches = maxStitches;
+
     glBegin(GL_TRIANGLES);
-    for (int x = 0; x < 1; x++) {
-        for (int z = 0; z < 1; z++) {
-            for (int i = 0; i < indices_count; i++) {
-	            glNormal3f(vertices[indices[i]].normal.x, vertices[indices[i]].normal.y, vertices[indices[i]].normal.z);
-	            glVertex3f(vertices[indices[i]].vertex.x + length * x, vertices[indices[i]].vertex.y, vertices[indices[i]].vertex.z + length * z);
+    drawSquare(loc_x, loc_z, stepSize * facetLength, 0, 0);
+    while (stepSize < maxSize) {
+        for (i = 0; i < steps; i++) {
+            disp_z += dir * stepSize;
+
+            loc_z = centerX + disp_z * facetLength;
+            
+            // handle LOD change
+            if (i == finalStep) {
+                numStitches = 0;
+                steps = stepRestart;
+                stepSize *= 2;
+                if (stepSize >= maxSize) {
+                    break;
+                }
+            }
+            
+            // don't want to handle any modulus or integer division with negatives
+            if (loc_z < 0 || loc_x < 0) {
+                continue;
+            }
+
+            // the first stitch is different after the LOD change
+            if (numStitches == 0) {
+                drawSquare(loc_x, loc_z, stepSize * facetLength, 0, -1);
+                numStitches++;
+            } else if (numStitches < maxStitches && i + 1 < steps) {
+                drawSquare(loc_x, loc_z, stepSize * facetLength, dir, 0);
+                numStitches++;
+            } else {
+                drawSquare(loc_x, loc_z, stepSize * facetLength, 0, 0);
             }
         }
+        if (stepSize >= maxSize) {
+            break;
+        }
+        for (i = 0; i < steps; i++) {
+            disp_x += dir * stepSize;
+            
+            loc_x = centerZ + disp_x * facetLength;
+            if (loc_z < 0 || loc_x < 0) {
+                continue;
+            }
+            
+            if (numStitches < maxStitches && i + 1 < steps) {
+                drawSquare(loc_x, loc_z, stepSize * facetLength, 0, -dir);
+                numStitches++;
+            } else {
+                drawSquare(loc_x, loc_z, stepSize * facetLength, 0, 0);
+            }
+        }
+        steps++;
+        dir *= -1;
     }
     glEnd();
 }
 
 void FFTWaves::drawNormal() {
     glBegin(GL_LINES);
-    for (int i = 0; i < Nplus1 * Nplus1; i++) {
+    for (int i = 0; i < N * N; i++) {
 	    glVertex3f(vertices[i].vertex.x, vertices[i].vertex.y, vertices[i].vertex.z);
 	    glVertex3f(vertices[i].vertex.x + vertices[i].normal.x, vertices[i].vertex.y + vertices[i].normal.y, vertices[i].vertex.z + vertices[i].normal.z);
     }
     glEnd();
+}
+
+bool FFTWaves::testAttrs(int detail, float amplitude, float windX, float windZ, int tileSize) {
+    return pow(2, detail) == N && amplitude == A && windX == w.x && windZ == w.z && pow(2, tileSize) == length;
 }

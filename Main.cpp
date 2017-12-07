@@ -9,15 +9,13 @@
 int wireframe = 1;
 int fill = 1;
 int normal = 0;
-int lods = 4;
-int layers = 2;
 
 int viewAngle = 45;
-float eyeX = 0;
-float eyeY = 32;
-float eyeZ = 68;
+float eyeX = 512;
+float eyeY = 5;
+float eyeZ = 512;
 float lookX = 0;
-float lookY = -.5;
+float lookY = -.2;
 float lookZ = -1;
 float clipNear = 0.001;
 float clipFar = 1000;
@@ -30,17 +28,24 @@ int lightR = 255;
 int lightG = 255;
 int lightB = 255;
 float dayTime = 14.5;
-int compassDir = 260;
+int compassDir = 275;
 
 float timeSince = 0;
-int pause = 0; 
-int useFFT = 1; 
+int pause = 0;
+
+int detail = 8;
+float amp = 0.0001f;
+float windX = 0.0f;
+float windZ = 32.0f;
+int tileSize = 6;
+int lods = 5;
+int lodLength = 6;
 
 int main_window;
 
 
 /** these are the global variables used for rendering **/
-FFTWaves* shape = new FFTWaves(64, 0.00005f, Vector2(0.0f,32.0f), 64);
+FFTWaves* waves;
 Camera* camera = new Camera();
 
 /***************************************** myGlutIdle() ***********/
@@ -106,12 +111,19 @@ void myGlutDisplay(void)
 	Matrix modelView = camera->GetModelViewMatrix();
 	glMultMatrixd(modelView.unpack());
     
-    shape->update(timeSince, useFFT);
+    if (!waves) {
+        waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize));
+    } else if (!waves->testAttrs(detail, amp, windX, windZ, tileSize)) {
+        delete waves;
+        waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize));
+    }
+
+    waves->update(timeSince);
 	if (fill) {
 		glEnable(GL_POLYGON_OFFSET_FILL);
 		glColor4f(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		shape->draw();
+		waves->draw(camera->GetEyePoint().unpack(), lods, lodLength);
 	}
 	
 	glDisable(GL_LIGHTING);
@@ -119,12 +131,12 @@ void myGlutDisplay(void)
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		glColor3f(0.0, 0.0, 0.0);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		shape->draw();
+		waves->draw(camera->GetEyePoint().unpack(), lods, lodLength);
 	}
 
 	if (normal) {
 		glColor3f(1.0, 0.0, 0.0);
-		shape->drawNormal();
+		waves->drawNormal();
 	}
 	glEnable(GL_LIGHTING);
 
@@ -133,7 +145,8 @@ void myGlutDisplay(void)
 
 void onExit()
 {
-	delete shape;
+	if(waves) delete waves;
+	if(camera) delete camera;
 }
 
 /**************************************** main() ********************/
@@ -201,23 +214,18 @@ int main(int argc, char* argv[])
 	new GLUI_Checkbox(render_panel, "Wireframe", &wireframe);
 	new GLUI_Checkbox(render_panel, "Fill", &fill);
 	new GLUI_Checkbox(render_panel, "Normal", &normal);
-	new GLUI_Checkbox(render_panel, "Use FFT", &useFFT);
 	new GLUI_Checkbox(render_panel, "Pause", &pause);
-	(new GLUI_Spinner(render_panel, "Num LODs:", &lods))
-		->set_int_limits(1, 10);
-	(new GLUI_Spinner(render_panel, "Num Layers:", &layers))
-		->set_int_limits(1, 10);
 
 	GLUI_Panel *camera_panel = glui->add_panel("Camera");
 	(new GLUI_Spinner(camera_panel, "Angle:", &viewAngle))
 		->set_int_limits(1, 179);
 
 	GLUI_Spinner* eyex_widget = glui->add_spinner_to_panel(camera_panel, "EyeX:", GLUI_SPINNER_FLOAT, &eyeX);
-	eyex_widget->set_float_limits(-50, 1000);
+	eyex_widget->set_float_limits(0, 1000);
 	GLUI_Spinner* eyey_widget = glui->add_spinner_to_panel(camera_panel, "EyeY:", GLUI_SPINNER_FLOAT, &eyeY);
 	eyey_widget->set_float_limits(-50, 1000);
 	GLUI_Spinner* eyez_widget = glui->add_spinner_to_panel(camera_panel, "EyeZ:", GLUI_SPINNER_FLOAT, &eyeZ);
-	eyez_widget->set_float_limits(-50, 1000);
+	eyez_widget->set_float_limits(0, 1000);
 
 	GLUI_Spinner* lookx_widget = glui->add_spinner_to_panel(camera_panel, "LookX:", GLUI_SPINNER_FLOAT, &lookX);
 	lookx_widget->set_float_limits(-5, 5);
@@ -232,7 +240,7 @@ int main(int argc, char* argv[])
 	clipF_widget->set_float_limits(0, 10000);
 
 	glui->add_column(true);
-
+    
 	GLUI_Panel *object_panel = glui->add_panel("Light & Color");
 	(new GLUI_Spinner(object_panel, "Waves R:", &wavesR))
 		->set_int_limits(0, 255);
@@ -252,6 +260,22 @@ int main(int argc, char* argv[])
 		->set_float_limits(0, 24);
 	(new GLUI_Spinner(object_panel, "Compass:", &compassDir))
 		->set_int_limits(0, 359);
+
+	GLUI_Panel *wave_panel = glui->add_panel("Wave Attributes");
+	(new GLUI_Spinner(wave_panel, "Detail:", &detail))
+		->set_int_limits(2, 10);
+	GLUI_Spinner* amp_widget = glui->add_spinner_to_panel(wave_panel, "Amplitude:", GLUI_SPINNER_FLOAT, &amp);
+	amp_widget->set_float_limits(0, 0.001f);
+	GLUI_Spinner* windX_widget = glui->add_spinner_to_panel(wave_panel, "WindX:", GLUI_SPINNER_FLOAT, &windX);
+	windX_widget->set_float_limits(-32.0f, 32.0f);
+	GLUI_Spinner* windZ_widget = glui->add_spinner_to_panel(wave_panel, "WindZ:", GLUI_SPINNER_FLOAT, &windZ);
+	windZ_widget->set_float_limits(-32.0f, 32.0f);
+	(new GLUI_Spinner(wave_panel, "Tile Size:", &tileSize))
+		->set_int_limits(0, 8);
+	(new GLUI_Spinner(wave_panel, "Num LODs:", &lods))
+		->set_int_limits(1, 10);
+	(new GLUI_Spinner(wave_panel, "Num Layers:", &lodLength))
+		->set_int_limits(1, 10);
 
 	glui->add_button("Quit", 0, (GLUI_Update_CB)exit);
 

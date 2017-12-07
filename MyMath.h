@@ -199,8 +199,8 @@ inline Vector3 operator-(const Vector3& v1, const Vector3& v2) {
 struct WaveVertex {
 	Vector3 vertex;
 	Vector3 normal;
-	Vector3 hTilde0;
-	Vector3 hTilde0star;
+	Complex hTilde0;
+	Complex hTilde0star;
 	Vector3 originalPos;
 };
 
@@ -222,6 +222,7 @@ struct HeightDispNorm {
     }
 };
 
+
 // taken from Lantz's helper classes
 inline float uniformRandomVariable() {
 	return (float)rand()/RAND_MAX;
@@ -240,6 +241,10 @@ inline Complex gaussianRandomVariable() {
 
 inline float clamp(const float& num, const float& min, const float& max) {
     return std::max(min, std::min(num, max));
+}
+
+inline float roundToMultiple(const float& num, const float& mult) {
+    return round(num / mult) * mult;
 }
 
 #endif
