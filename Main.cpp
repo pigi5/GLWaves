@@ -123,7 +123,7 @@ void myGlutDisplay(void)
 		glEnable(GL_POLYGON_OFFSET_FILL);
 		glColor4f(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		waves->draw(camera->GetEyePoint().unpack(), lods, lodLength);
+		waves->draw(camera->GetEyePoint()[0], camera->GetEyePoint()[2], lods, lodLength);
 	}
 	
 	glDisable(GL_LIGHTING);
@@ -131,7 +131,7 @@ void myGlutDisplay(void)
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		glColor3f(0.0, 0.0, 0.0);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		waves->draw(camera->GetEyePoint().unpack(), lods, lodLength);
+		waves->draw(camera->GetEyePoint()[0], camera->GetEyePoint()[2], lods, lodLength);
 	}
 
 	if (normal) {
