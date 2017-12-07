@@ -876,4 +876,16 @@ inline double dot(const Point& u, const Point& v) {
 	return d;
 };
 
+
+inline bool intersectYPlane(const Point &d0, const Vector &d, float &t) 
+{ 
+    Vector n(0,1,0);
+    float denom = dot(n, d); 
+    if (abs(denom) > 1e-6) { 
+        t = dot(-d0, n) / denom; 
+        return (t >= 0); 
+    } 
+    return false; 
+} 
+
 #endif

@@ -117,28 +117,38 @@ void myGlutDisplay(void)
         delete waves;
         waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize));
     }
+    
+    Point centerPoint;
+    float t;
+	if (fill || wireframe || normal) {
+        waves->update(timeSince);
 
-    waves->update(timeSince);
-	if (fill) {
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glColor4f(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		waves->draw(camera->GetEyePoint()[0], camera->GetEyePoint()[2], lods, lodLength);
-	}
+        if (intersectYPlane(eyeP, lookV, t)) {
+            centerPoint = eyeP + lookV * t;
+
+	        if (fill) {
+		        glEnable(GL_POLYGON_OFFSET_FILL);
+		        glColor4f(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f);
+		        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		        waves->draw(centerPoint[0], centerPoint[2], lods, lodLength);
+	        }
 	
-	glDisable(GL_LIGHTING);
-	if (wireframe) {
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		glColor3f(0.0, 0.0, 0.0);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		waves->draw(camera->GetEyePoint()[0], camera->GetEyePoint()[2], lods, lodLength);
-	}
+	        glDisable(GL_LIGHTING);
+	        if (wireframe) {
+		        glDisable(GL_POLYGON_OFFSET_FILL);
+		        glColor3f(0.0, 0.0, 0.0);
+		        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		        waves->draw(centerPoint[0], centerPoint[2], lods, lodLength);
+	        }
 
-	if (normal) {
-		glColor3f(1.0, 0.0, 0.0);
-		waves->drawNormal();
-	}
-	glEnable(GL_LIGHTING);
+	        if (normal) {
+		        glColor3f(1.0, 0.0, 0.0);
+		        waves->drawNormal();
+	        }
+
+	        glEnable(GL_LIGHTING);
+        }
+    }
 
 	glutSwapBuffers();
 }

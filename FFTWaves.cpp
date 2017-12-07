@@ -288,7 +288,7 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) 
         for (i = 0; i < steps; i++) {
             disp_z += dir * stepSize;
 
-            loc_z = centerX + disp_z * facetLength;
+            loc_z = centerZ + disp_z * facetLength;
             
             // handle LOD change
             if (i == finalStep) {
@@ -322,7 +322,7 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) 
         for (i = 0; i < steps; i++) {
             disp_x += dir * stepSize;
             
-            loc_x = centerZ + disp_x * facetLength;
+            loc_x = centerX + disp_x * facetLength;
             if (loc_z < 0 || loc_x < 0) {
                 continue;
             }
