@@ -1,8 +1,16 @@
+/**
+ * Source: https://www.keithlantz.net/2011/10/ocean-simulation-part-one-using-the-discrete-fourier-transform/
+ *         (heavily modified)
+ * Authors: Keith Lantz
+ *          Ford Hash
+ * Date Modified: 12/7/17
+ */
+
 #include "FFTWaves.h"
 #include <iostream>
 
-FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float length) :
-    g(9.81), period(200.0f), N(N), A(A), w(w), length(length), facetLength(length / N), vertices(0),
+FFTWaves::FFTWaves(const int N, const float A, const Vector2 w, const float length, const int worldSize) :
+    g(9.81), period(200.0f), N(N), A(A), w(w), length(length), worldSize(worldSize), facetLength(length / N), vertices(0),
     h_tilde(0), h_tilde_slopex(0), h_tilde_slopez(0), h_tilde_dx(0), h_tilde_dz(0), fft(0)
 {
     h_tilde        = new Complex[N*N];
@@ -198,7 +206,17 @@ void FFTWaves::update(float t) {
     evaluateWavesFFT(t);
 }
 
+void FFTWaves::setColor(float r, float g, float b, float a, bool f) {
+    wavesR = r;
+    wavesG = g;
+    wavesB = b;
+    wavesA = a;
+    foam = f;
+}
+
 void FFTWaves::drawPoint(const float& x, const float& z) {
+    static Vector3 upVector(0,1,0);
+
     int n = floor(fmod(x, length) / facetLength);
     float tile_x = floor(x / length) * length;
 
@@ -206,6 +224,12 @@ void FFTWaves::drawPoint(const float& x, const float& z) {
     float tile_z = floor(z / length) * length;
 
     WaveVertex node = vertices[m * N + n];
+
+    if (foam && node.vertex.y > node.originalPos.y && (node.vertex - node.originalPos).length() > 6.0f) {
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    } else {
+        glColor4f(wavesR, wavesG, wavesB, wavesA);
+    }
 
 	glNormal3f(node.normal.x, node.normal.y, node.normal.z);
 	glVertex3f(node.vertex.x + tile_x, node.vertex.y, node.vertex.z + tile_z);
@@ -263,10 +287,12 @@ void FFTWaves::drawSquare(const float& x, const float& z, float size, signed cha
 }
 
 void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) {
-    unsigned short maxSize = pow(2, numLods - 1);
+    unsigned short maxSize = pow(2, numLods);
     unsigned short finalStep = pow(2, lodLength + 1) - 1;
     unsigned short stepRestart = pow(2, lodLength);
     unsigned short maxStitches = stepRestart * 4;
+
+    bool done = false;
 
     int i;
 
@@ -282,9 +308,10 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) 
 
     unsigned short numStitches = maxStitches;
 
+    // draw lods from center, "spiraling" out
     glBegin(GL_TRIANGLES);
     drawSquare(loc_x, loc_z, stepSize * facetLength, 0, 0);
-    while (stepSize < maxSize) {
+    while (!done) {
         for (i = 0; i < steps; i++) {
             disp_z += dir * stepSize;
 
@@ -292,16 +319,17 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) 
             
             // handle LOD change
             if (i == finalStep) {
-                numStitches = 0;
-                steps = stepRestart;
-                stepSize *= 2;
-                if (stepSize >= maxSize) {
+                if (stepSize * 2 >= maxSize) {
+                    done = true;
                     break;
                 }
+                stepSize *= 2;
+                numStitches = 0;
+                steps = stepRestart;
             }
             
-            // don't want to handle any modulus or integer division with negatives
-            if (loc_z < 0 || loc_x < 0) {
+            // clamp to world bounds
+            if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
                 continue;
             }
 
@@ -316,14 +344,14 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) 
                 drawSquare(loc_x, loc_z, stepSize * facetLength, 0, 0);
             }
         }
-        if (stepSize >= maxSize) {
+        if (done) {
             break;
         }
         for (i = 0; i < steps; i++) {
             disp_x += dir * stepSize;
             
             loc_x = centerX + disp_x * facetLength;
-            if (loc_z < 0 || loc_x < 0) {
+            if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
                 continue;
             }
             
@@ -336,6 +364,99 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength) 
         }
         steps++;
         dir *= -1;
+    }
+
+    // draw edge pieces
+    for (i = 0; i <= steps; i++) {
+        loc_x = centerX + (i - steps / 2) * stepSize * facetLength;
+        if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
+            continue;
+        }
+        if (i == steps) {                                         //   bottom right corner
+            drawPoint(loc_x, loc_z);                                // top left
+            drawPoint(worldSize, worldSize);                        // bottom right
+            drawPoint(worldSize, loc_z);                            // top right
+            drawPoint(loc_x, loc_z);                                // top left        
+            drawPoint(loc_x, worldSize);                            // bottom left
+            drawPoint(worldSize, worldSize);                        // bottom right
+        } else {                                                  //   bottom edges
+            drawPoint(loc_x, loc_z);                                // top left
+            drawPoint(loc_x + stepSize * facetLength, worldSize);   // bottom right
+            drawPoint(loc_x + stepSize * facetLength, loc_z);       // top right
+            drawPoint(loc_x, loc_z);                                // top left        
+            drawPoint(loc_x, worldSize);                            // bottom left
+            drawPoint(loc_x + stepSize * facetLength, worldSize);   // bottom right
+        }
+
+    }
+    for (i = 1; i <= steps + 1; i++) {
+        if (i == steps + 1) {                                     //   top right corner
+            if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
+                continue;
+            }
+            drawPoint(loc_x, 0);                                    // top left
+            drawPoint(worldSize, loc_z);                            // bottom right
+            drawPoint(worldSize, 0);                                // top right
+            drawPoint(loc_x, 0);                                    // top left        
+            drawPoint(loc_x, loc_z);                                // bottom left
+            drawPoint(worldSize, loc_z );                           // bottom right
+        } else {                                                  //   right edges
+            loc_z = centerZ - (i - steps / 2) * stepSize * facetLength;
+            if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
+                continue;
+            }
+            drawPoint(loc_x, loc_z);                                // top left
+            drawPoint(worldSize, loc_z + stepSize * facetLength);   // bottom right
+            drawPoint(worldSize, loc_z);                            // top right
+            drawPoint(loc_x, loc_z);                                // top left        
+            drawPoint(loc_x, loc_z + stepSize * facetLength);       // bottom left
+            drawPoint(worldSize, loc_z + stepSize * facetLength);   // bottom right
+        }
+    }
+    for (i = 1; i <= steps + 1; i++) {
+        if (i == steps + 1) {                                     //   top left corner
+            if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
+                continue;
+            }
+            drawPoint(0, 0);                                        // top left
+            drawPoint(loc_x, loc_z);                                // bottom right
+            drawPoint(loc_x, 0);                                    // top right
+            drawPoint(0, 0);                                        // top left        
+            drawPoint(0, loc_z);                                    // bottom left
+            drawPoint(loc_x, loc_z);                                // bottom right
+        } else {                                                  //   top edges
+            loc_x = centerX - (i - steps / 2) * stepSize * facetLength;
+            if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
+                continue;
+            }
+            drawPoint(loc_x, 0);                                    // top left
+            drawPoint(loc_x + stepSize * facetLength, loc_z);       // bottom right
+            drawPoint(loc_x + stepSize * facetLength, 0);           // top right
+            drawPoint(loc_x, 0);                                    // top left        
+            drawPoint(loc_x, loc_z);                                // bottom left
+            drawPoint(loc_x + stepSize * facetLength, loc_z);       // bottom right
+        }
+    }
+    for (i = 0; i <= steps; i++) {
+        loc_z = centerZ + (i - steps / 2) * stepSize * facetLength;
+        if (loc_z < 0 || loc_x < 0 || loc_z >= worldSize || loc_x >= worldSize) {
+            continue;
+        }
+        if (i == steps) {                                         //   bottom left corner
+            drawPoint(0, loc_z);                                    // top left
+            drawPoint(loc_x, worldSize);                            // bottom right
+            drawPoint(loc_x, loc_z);                                // top right
+            drawPoint(0, loc_z);                                    // top left        
+            drawPoint(0, worldSize);                                // bottom left
+            drawPoint(loc_x, worldSize);                            // bottom right
+        } else {                                                  //   left edges
+            drawPoint(0, loc_z);                                    // top left
+            drawPoint(loc_x, loc_z + stepSize * facetLength);       // bottom right
+            drawPoint(loc_x, loc_z);                                // top right
+            drawPoint(0, loc_z);                                    // top left        
+            drawPoint(0, loc_z + stepSize * facetLength);           // bottom left
+            drawPoint(loc_x, loc_z + stepSize * facetLength);       // bottom right
+        }
     }
     glEnd();
 }

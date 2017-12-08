@@ -1,51 +1,64 @@
+/**
+ * Author: Ford Hash
+ * Date Modified: 12/7/17
+ */
+
 #include <GL/glui.h>
 #include <GL/glut.h>
 #include "FFTWaves.h"
+#include "Skybox.h"
 #include "Camera.h"
 #include <ctime>
 #include <iostream>
 
+#define CB_BIRDSEYE 1
+#define CB_RESET 2
+
+int WORLD_SIZE = 2048;
 /** These are the live variables passed into GLUI ***/
+GLUI *glui;
+
 int wireframe = 1;
 int fill = 1;
-int normal = 0;
 
 int viewAngle = 45;
-float eyeX = 512;
-float eyeY = 5;
-float eyeZ = 512;
+float eyeX = WORLD_SIZE / 2;
+float eyeY = 6;
+float eyeZ = WORLD_SIZE / 2;
 float lookX = 0;
-float lookY = -.2;
+float lookY = -.17;
 float lookZ = -1;
 float clipNear = 0.001;
-float clipFar = 1000;
+float clipFar = 4000;
 
-int wavesR = 78;
-int wavesG = 112;
-int wavesB = 159;
-int wavesA = 225;
+int wavesR = 40;
+int wavesG = 50;
+int wavesB = 70;
+int wavesA = 255;
 int lightR = 255;
 int lightG = 255;
 int lightB = 255;
-float dayTime = 14.5;
-int compassDir = 275;
+float dayTime = 11;
+int compassDir = 140;
 
 float timeSince = 0;
 int pause = 0;
 
 int detail = 8;
 float amp = 0.0001f;
-float windX = 0.0f;
+float windX = 10.0f;
 float windZ = 32.0f;
 int tileSize = 6;
 int lods = 5;
 int lodLength = 6;
+int foam = 0;
 
 int main_window;
 
 
 /** these are the global variables used for rendering **/
 FFTWaves* waves;
+Skybox* skybox;
 Camera* camera = new Camera();
 
 /***************************************** myGlutIdle() ***********/
@@ -111,39 +124,46 @@ void myGlutDisplay(void)
 	Matrix modelView = camera->GetModelViewMatrix();
 	glMultMatrixd(modelView.unpack());
     
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glPolygonMode(GL_FRONT, GL_FILL);
+    glColor4f(1, 1, 1, 1);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    skybox->draw();
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+
     if (!waves) {
-        waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize));
+        waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize), WORLD_SIZE);
     } else if (!waves->testAttrs(detail, amp, windX, windZ, tileSize)) {
         delete waves;
-        waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize));
+        waves = new FFTWaves(pow(2, detail), amp, Vector2(windX, windZ), pow(2, tileSize), WORLD_SIZE);
     }
     
     Point centerPoint;
-    float t;
-	if (fill || wireframe || normal) {
+    lookV.normalize();
+    float t, centerX, centerZ;
+	if (fill || wireframe) {
         waves->update(timeSince);
 
         if (intersectYPlane(eyeP, lookV, t)) {
             centerPoint = eyeP + lookV * t;
+            centerX = clamp(centerPoint[0], 0, WORLD_SIZE);
+            centerZ = clamp(centerPoint[2], 0, WORLD_SIZE);
 
 	        if (fill) {
 		        glEnable(GL_POLYGON_OFFSET_FILL);
-		        glColor4f(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f);
 		        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		        waves->draw(centerPoint[0], centerPoint[2], lods, lodLength);
+                waves->setColor(wavesR / 255.0f, wavesG / 255.0f, wavesB / 255.0f, wavesA / 255.0f, foam);
+		        waves->draw(centerX, centerZ, lods, lodLength);
 	        }
 	
 	        glDisable(GL_LIGHTING);
 	        if (wireframe) {
 		        glDisable(GL_POLYGON_OFFSET_FILL);
-		        glColor3f(0.0, 0.0, 0.0);
 		        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		        waves->draw(centerPoint[0], centerPoint[2], lods, lodLength);
-	        }
-
-	        if (normal) {
-		        glColor3f(1.0, 0.0, 0.0);
-		        waves->drawNormal();
+                waves->setColor(0.0, 0.0, 0.0, 1.0, false);
+		        waves->draw(centerX, centerZ, lods, lodLength);
 	        }
 
 	        glEnable(GL_LIGHTING);
@@ -157,13 +177,43 @@ void onExit()
 {
 	if(waves) delete waves;
 	if(camera) delete camera;
+    if(skybox) delete skybox;
+}
+
+void glui_cb(int control) {
+	switch(control) {
+	case CB_BIRDSEYE:
+        viewAngle = 45;
+        eyeX = WORLD_SIZE / 2;
+        eyeY = 100;
+        eyeZ = WORLD_SIZE / 2;
+        lookX = 0;
+        lookY = -1;
+        lookZ = -0.000001;
+        clipNear = 0.001;
+        clipFar = 4000;
+		break;
+	case CB_RESET:
+        viewAngle = 45;
+        eyeX = WORLD_SIZE / 2;
+        eyeY = 6;
+        eyeZ = WORLD_SIZE / 2;
+        lookX = 0;
+        lookY = -.17;
+        lookZ = -1;
+        clipNear = 0.001;
+        clipFar = 4000;
+		break;
+	}
+
+    glui->sync_live();
+	glutPostRedisplay();
 }
 
 /**************************************** main() ********************/
 
 int main(int argc, char* argv[])
 {
-
 	atexit(onExit);
 
 	/****************************************/
@@ -184,14 +234,14 @@ int main(int argc, char* argv[])
 	/****************************************/
 
 
-	glClearColor (0.0f, 0.0f, 0.0f, 0.0f);
-    glShadeModel (GL_SMOOTH);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glShadeModel(GL_SMOOTH);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
 
     GLfloat light_pos0[] = {100.0f, 100.0f, 100.0f, 0.0f};
-    glLightfv (GL_LIGHT0, GL_POSITION, light_pos0);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_pos0);
     
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat mat_shininess[] = { 100.0 };
@@ -202,8 +252,12 @@ int main(int argc, char* argv[])
     glEnable(GL_COLOR_MATERIAL);
 
     glEnable(GL_LIGHTING);
-    glEnable (GL_LIGHT0);
-    glEnable (GL_DEPTH_TEST);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_DEPTH_TEST);
+
+    if (!skybox) {
+        skybox = new Skybox(WORLD_SIZE, WORLD_SIZE, WORLD_SIZE);
+    }
 
 	///****************************************/
 	///*          Enable z-buferring          */
@@ -218,12 +272,11 @@ int main(int argc, char* argv[])
 	/*         Here's the GLUI code         */
 	/****************************************/
 
-	GLUI *glui = GLUI_Master.create_glui("GLUI");
+	glui = GLUI_Master.create_glui("GLUI");
 
 	GLUI_Panel *render_panel = glui->add_panel("Render");
 	new GLUI_Checkbox(render_panel, "Wireframe", &wireframe);
 	new GLUI_Checkbox(render_panel, "Fill", &fill);
-	new GLUI_Checkbox(render_panel, "Normal", &normal);
 	new GLUI_Checkbox(render_panel, "Pause", &pause);
 
 	GLUI_Panel *camera_panel = glui->add_panel("Camera");
@@ -231,11 +284,11 @@ int main(int argc, char* argv[])
 		->set_int_limits(1, 179);
 
 	GLUI_Spinner* eyex_widget = glui->add_spinner_to_panel(camera_panel, "EyeX:", GLUI_SPINNER_FLOAT, &eyeX);
-	eyex_widget->set_float_limits(0, 1000);
+	eyex_widget->set_float_limits(0, WORLD_SIZE);
 	GLUI_Spinner* eyey_widget = glui->add_spinner_to_panel(camera_panel, "EyeY:", GLUI_SPINNER_FLOAT, &eyeY);
-	eyey_widget->set_float_limits(-50, 1000);
+	eyey_widget->set_float_limits(-50, WORLD_SIZE / 2);
 	GLUI_Spinner* eyez_widget = glui->add_spinner_to_panel(camera_panel, "EyeZ:", GLUI_SPINNER_FLOAT, &eyeZ);
-	eyez_widget->set_float_limits(0, 1000);
+	eyez_widget->set_float_limits(0, WORLD_SIZE);
 
 	GLUI_Spinner* lookx_widget = glui->add_spinner_to_panel(camera_panel, "LookX:", GLUI_SPINNER_FLOAT, &lookX);
 	lookx_widget->set_float_limits(-5, 5);
@@ -270,6 +323,8 @@ int main(int argc, char* argv[])
 		->set_float_limits(0, 24);
 	(new GLUI_Spinner(object_panel, "Compass:", &compassDir))
 		->set_int_limits(0, 359);
+    GLUI_Button *action_button = glui->add_button_to_panel(object_panel, "Bird's Eye", CB_BIRDSEYE, glui_cb);
+    GLUI_Button *reset_button = glui->add_button_to_panel(object_panel, "Reset View", CB_RESET, glui_cb);
 
 	GLUI_Panel *wave_panel = glui->add_panel("Wave Attributes");
 	(new GLUI_Spinner(wave_panel, "Detail:", &detail))
@@ -286,6 +341,7 @@ int main(int argc, char* argv[])
 		->set_int_limits(1, 10);
 	(new GLUI_Spinner(wave_panel, "Num Layers:", &lodLength))
 		->set_int_limits(1, 10);
+	new GLUI_Checkbox(wave_panel, "\"Foam\"", &foam);
 
 	glui->add_button("Quit", 0, (GLUI_Update_CB)exit);
 

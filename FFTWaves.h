@@ -1,9 +1,10 @@
-/****************************************************************************
-
-Name: Ford Hash
-CSI 4341: Assignment 2: Camera
-
-****************************************************************************/
+/**
+ * Source: https://www.keithlantz.net/2011/10/ocean-simulation-part-one-using-the-discrete-fourier-transform/
+ *         (heavily modified)
+ * Authors: Keith Lantz
+ *          Ford Hash
+ * Date Modified: 12/7/17
+ */
 
 #ifndef FFTWAVES_H
 #define FFTWAVES_H
@@ -19,6 +20,7 @@ private:
     float period;                           // time until repeat
     Vector2 w;                              // wind parameter
     float length;                           // length parameter
+    int worldSize;
     float facetLength;                      // length per square
     Complex *h_tilde,                       // for fast fourier transform
         *h_tilde_slopex, *h_tilde_slopez,
@@ -27,11 +29,14 @@ private:
  
     WaveVertex *vertices;                   // vertices for vertex buffer object
  
+    float wavesR, wavesG, wavesB, wavesA;
+    bool foam;
+
     void drawPoint(const float& x, const float& z);
     void drawSquare(const float& x, const float& y, float size, signed char stitchX, signed char stitchZ);
 protected:
 public:
-    FFTWaves(const int N, const float A, const Vector2 w, const float length);
+    FFTWaves(const int N, const float A, const Vector2 w, const float length, const int worldSize);
     ~FFTWaves();
  
     float dispersion(int n_prime, int m_prime);     // deep water
@@ -43,6 +48,8 @@ public:
     void update(float t);
     void draw(double centerX, double centerZ, int numLods, int lodLength);
     void drawNormal();
+
+    void setColor(float r, float g, float b, float a, bool foam);
 
     bool testAttrs(int detail, float amplitude, float windX, float windZ, int tileSize);
 };

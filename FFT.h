@@ -1,3 +1,9 @@
+/**
+ * Source: https://www.keithlantz.net/2011/11/ocean-simulation-part-two-using-the-fast-fourier-transform/
+ * Author: Keith Lantz
+ * Date Modified: 11/5/2011
+ */
+
 #ifndef FFT_H
 #define FFT_H
  

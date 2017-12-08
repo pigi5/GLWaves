@@ -10,6 +10,7 @@
 #include <GL/glut.h>
 #include <stdlib.h>
 #include <algorithm>
+#include <iostream>
 
 const float EPSILONF = 1e-12;
 const double EPSILON = 1e-30;
@@ -877,11 +878,10 @@ inline double dot(const Point& u, const Point& v) {
 };
 
 
-inline bool intersectYPlane(const Point &d0, const Vector &d, float &t) 
-{ 
+inline bool intersectYPlane(const Point &d0, const Vector &d, float &t) { 
     Vector n(0,1,0);
-    float denom = dot(n, d); 
-    if (abs(denom) > 1e-6) { 
+    float denom = dot(n, d);
+    if (abs(denom) > EPSILONF) { 
         t = dot(-d0, n) / denom; 
         return (t >= 0); 
     } 

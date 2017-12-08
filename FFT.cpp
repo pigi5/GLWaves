@@ -1,3 +1,8 @@
+/**
+ * Source: https://www.keithlantz.net/2011/11/ocean-simulation-part-two-using-the-fast-fourier-transform/
+ * Author: Keith Lantz
+ * Date Modified: 11/5/2011
+ */
 #include "FFT.h"
 
 FFT::FFT(unsigned int N) : N(N), reversed(0), T(0), pi2(2 * PI) {

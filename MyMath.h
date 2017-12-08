@@ -1,3 +1,8 @@
+/**
+ * Author: Ford Hash
+ * Date Modified: 12/5/17
+ */
+
 #ifndef MYMATH_H
 #define MYMATH_H
 
@@ -237,10 +242,6 @@ inline Complex gaussianRandomVariable() {
 	} while ( w >= 1.f );
 	w = sqrt((-2.f * log(w)) / w);
 	return Complex(x1 * w, x2 * w);
-}
-
-inline float clamp(const float& num, const float& min, const float& max) {
-    return std::max(min, std::min(num, max));
 }
 
 inline float roundToMultiple(const float& num, const float& mult) {
