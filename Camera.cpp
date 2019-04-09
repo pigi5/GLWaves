@@ -6,14 +6,20 @@
 #include "Camera.h"
 #include <iostream>
 
-Camera::Camera() {
+Camera::Camera()
+{
     Reset();
 }
 
-Camera::~Camera() {
+Camera::~Camera()
+{
 }
 
-void Camera::Reset() {
+/**
+ * Resets the camera to default values.
+ */
+void Camera::Reset()
+{
     eye = Point(0,0,2);
     look = Vector(0,0,-1.0);
     up = Vector(0,1.0,0);
@@ -28,8 +34,17 @@ void Camera::Reset() {
     CreateModelViewMatrix();
 }
 
-void Camera::Orient(Point& eye, Point& focus, Vector& up) {
-    if (this->eye != eye || this->look != focus - eye || this->up != up) {
+/**
+ * Orients the camera to be at the given eye point, face the given focus point,
+ * and be rotated according to the given up vector.
+ * @param eye The location of the camera
+ * @param focus The point toward which the camera should face
+ * @param up The vector that describes the rotation of the camera
+ */
+void Camera::Orient(Point& eye, Point& focus, Vector& up)
+{
+    if (this->eye != eye || this->look != focus - eye || this->up != up)
+    {
         this->eye = eye;
         this->look = focus - eye;
         this->up = up;
@@ -38,8 +53,17 @@ void Camera::Orient(Point& eye, Point& focus, Vector& up) {
 }
 
 
-void Camera::Orient(Point& eye, Vector& look, Vector& up) {
-    if (this->eye != eye || this->look != look || this->up != up) {
+/**
+ * Orients the camera to be at the given eye point, face in the direction of the
+ * given look vector, and be rotated according to the given up vector.
+ * @param eye The location of the camera
+ * @param look The vector describing the direction the camera should face
+ * @param up The vector describing the rotation of the camera
+ */
+void Camera::Orient(Point& eye, Vector& look, Vector& up)
+{
+    if (this->eye != eye || this->look != look || this->up != up)
+    {
         this->eye = eye;
         this->look = look;
         this->up = up;
@@ -47,11 +71,17 @@ void Camera::Orient(Point& eye, Vector& look, Vector& up) {
     }
 }
 
-Matrix Camera::GetProjectionMatrix() {
-	return projectionMatrix;
+Matrix Camera::GetProjectionMatrix()
+{
+    return projectionMatrix;
 }
 
-void Camera::CreateProjectionMatrix() {
+/**
+ * Creates the projection matrix using the near plane, far plane, aspect ratio,
+ * and view angle.
+ */
+void Camera::CreateProjectionMatrix()
+{
     double c = -nearPlane/farPlane;
     Matrix unhinge(1, 0, 0, 0,
                    0, 1, 0, 0,
@@ -65,12 +95,17 @@ void Camera::CreateProjectionMatrix() {
     projectionMatrix = unhinge * scale;
 
     parallelProjectionMatrix = Matrix(2/screenWidth, 0, 0, 0,
-                              0, 2/screenHeight, 0, 0,
-                              0, 0, 1/farPlane, 0,
-                              0, 0, 0, 1);
+                                      0, 2/screenHeight, 0, 0,
+                                      0, 0, 1/farPlane, 0,
+                                      0, 0, 0, 1);
 }
 
-void Camera::computeInverseNormalizationMatrix() {
+/**
+ * Creates the inverse normalization matrix using the near plane, far plane,
+ * aspect ratio, and view angle.
+ */
+void Camera::computeInverseNormalizationMatrix()
+{
     double widthAngle = atan((screenWidth/2.0)/nearPlane)*2.0;
     Matrix scale(1/(tan(widthAngle/2.0)*farPlane), 0, 0, 0,
                  0, 1/(tan(viewAngle/2.0)*farPlane), 0, 0,
@@ -79,12 +114,19 @@ void Camera::computeInverseNormalizationMatrix() {
     inverseNormalizationMatrix = invert(scale * GetModelViewMatrix());
 }
 
-Matrix Camera::getInverseNormalizationMatrix() {
+Matrix Camera::getInverseNormalizationMatrix()
+{
     return inverseNormalizationMatrix;
 }
 
-void Camera::SetViewAngle (double viewAngle) {
-    if (this->viewAngle != DEG_TO_RAD(viewAngle)) {
+/**
+ * Sets the view angle to the given value, adjusting screen size accordingly.
+ * @param viewAngle The new view angle in degrees
+ */
+void Camera::SetViewAngle (double viewAngle)
+{
+    if (this->viewAngle != DEG_TO_RAD(viewAngle))
+    {
         double aspectRatio = GetScreenWidthRatio();
         this->viewAngle = DEG_TO_RAD(viewAngle);
         screenHeight = tan(this->viewAngle / 2.0) * nearPlane * 2.0;
@@ -93,8 +135,14 @@ void Camera::SetViewAngle (double viewAngle) {
     }
 }
 
-void Camera::SetNearPlane (double nearPlane) {
-    if (this->nearPlane != nearPlane) {
+/**
+ * Sets the near plane to the given value, adjusting screen size accordingly.
+ * @param nearPlane The new near plane distance
+ */
+void Camera::SetNearPlane (double nearPlane)
+{
+    if (this->nearPlane != nearPlane)
+    {
         this->nearPlane = nearPlane;
         double aspectRatio = GetScreenWidthRatio();
         screenHeight = tan(this->viewAngle / 2.0) * nearPlane * 2.0;
@@ -103,15 +151,28 @@ void Camera::SetNearPlane (double nearPlane) {
     }
 }
 
-void Camera::SetFarPlane (double farPlane) {
-    if (this->farPlane != farPlane) {
+/**
+ * Sets the far plane to the given value, adjusting screen size accordingly.
+ * @param farPlane The new far plane distance
+ */
+void Camera::SetFarPlane (double farPlane)
+{
+    if (this->farPlane != farPlane)
+    {
         this->farPlane = farPlane;
         CreateProjectionMatrix();
     }
 }
 
-void Camera::SetScreenSize (int screenWidth, int screenHeight) {
-    if (this->screenWidth != screenWidth || this->screenHeight != screenHeight) {
+/**
+ * Sets the screen size to the given values, adjusting the near plane accordingly.
+ * @param screenWidth The new screen width
+ * @param screenHeight The new screen height
+ */
+void Camera::SetScreenSize (int screenWidth, int screenHeight)
+{
+    if (this->screenWidth != screenWidth || this->screenHeight != screenHeight)
+    {
         this->screenWidth = screenWidth;
         this->screenHeight = screenHeight;
         nearPlane = (screenHeight / 2.0) / tan(viewAngle / 2.0);
@@ -119,11 +180,17 @@ void Camera::SetScreenSize (int screenWidth, int screenHeight) {
     }
 }
 
-Matrix Camera::GetModelViewMatrix() {
-	return modelViewMatrix;
+Matrix Camera::GetModelViewMatrix()
+{
+    return modelViewMatrix;
 }
 
-void Camera::CreateModelViewMatrix() {
+
+/**
+ * Creates the model-view matrix using the look vector, up vector, and eye location.
+ */
+void Camera::CreateModelViewMatrix()
+{
     wVector = normalize(-look);
     uVector = normalize(cross(up, wVector));
     vVector = cross(wVector, uVector);
@@ -141,36 +208,67 @@ void Camera::CreateModelViewMatrix() {
     modelViewMatrix = rotate * trans_mat(Point(0,0,0) - eye);
 }
 
-void Camera::RotateV(double angle) {
-    if (vRot != DEG_TO_RAD(angle)) {
+/**
+ * Rotates the camera along the v axis.
+ * @param angle Angle of rotation in degrees.
+ */
+void Camera::RotateV(double angle)
+{
+    if (vRot != DEG_TO_RAD(angle))
+    {
         vRot = DEG_TO_RAD(angle);
         CreateModelViewMatrix();
     }
 }
 
-void Camera::RotateU(double angle) {
-    if (uRot != DEG_TO_RAD(angle)) {
+/**
+ * Rotates the camera along the u axis.
+ * @param angle Angle of rotation in degrees.
+ */
+void Camera::RotateU(double angle)
+{
+    if (uRot != DEG_TO_RAD(angle))
+    {
         uRot = DEG_TO_RAD(angle);
         CreateModelViewMatrix();
     }
 }
 
-void Camera::RotateW(double angle) {
-    if (wRot != DEG_TO_RAD(angle)) {
+/**
+ * Rotates the camera along the w axis.
+ * @param angle Angle of rotation in degrees.
+ */
+void Camera::RotateW(double angle)
+{
+    if (wRot != DEG_TO_RAD(angle))
+    {
         wRot = DEG_TO_RAD(angle);
         CreateModelViewMatrix();
     }
 }
 
-void Camera::Translate(const Vector &v) {
-    if (eye != Point(0, 0, 0) + v) {
+/**
+ * Translates the camera using the given vector.
+ * @param v The translation vector.
+ */
+void Camera::Translate(const Vector &v)
+{
+    if (eye != Point(0, 0, 0) + v)
+    {
         eye = Point(0, 0, 0) + v;
         CreateModelViewMatrix();
     }
 }
 
 
-void Camera::Rotate(Point p, Vector axis, double degrees) {
+/**
+ * Rotates the camera about the given line by the given angle.
+ * @param p The point defining the rotation line.
+ * @param axis The vector defining the rotation line.
+ * @param degrees The angle of rotation in degrees.
+ */
+void Camera::Rotate(Point p, Vector axis, double degrees)
+{
     Matrix rot = rot_mat(p, axis, DEG_TO_RAD(degrees));
 
     eye = rot * eye;
@@ -181,42 +279,52 @@ void Camera::Rotate(Point p, Vector axis, double degrees) {
 }
 
 
-Point Camera::GetEyePoint() {
-	return eye;
+Point Camera::GetEyePoint()
+{
+    return eye;
 }
 
-Vector Camera::GetLookVector() {
-	return look;
+Vector Camera::GetLookVector()
+{
+    return look;
 }
 
-Vector Camera::GetUpVector() {
-	return up;
+Vector Camera::GetUpVector()
+{
+    return up;
 }
 
-double Camera::GetViewAngle() {
-	return RAD_TO_DEG(viewAngle);
+double Camera::GetViewAngle()
+{
+    return RAD_TO_DEG(viewAngle);
 }
 
-double Camera::GetNearPlane() {
-	return nearPlane;
+double Camera::GetNearPlane()
+{
+    return nearPlane;
 }
 
-double Camera::GetFarPlane() {
-	return farPlane;
+double Camera::GetFarPlane()
+{
+    return farPlane;
 }
 
-int Camera::GetScreenWidth() {
-	return screenWidth;
+int Camera::GetScreenWidth()
+{
+    return screenWidth;
 }
 
-int Camera::GetScreenHeight() {
-	return screenHeight;
+int Camera::GetScreenHeight()
+{
+    return screenHeight;
 }
 
-double Camera::GetFilmPlanDepth() {
-	return farPlane - nearPlane;
+double Camera::GetFilmPlanDepth()
+{
+    return farPlane - nearPlane;
 }
 
-double Camera::GetScreenWidthRatio() {
-	return screenWidth / screenHeight;
+double Camera::GetScreenWidthRatio()
+{
+    return screenWidth / screenHeight;
 }

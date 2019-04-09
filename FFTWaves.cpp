@@ -237,18 +237,29 @@ void FFTWaves::setColor(float r, float g, float b, float a, bool f)
     foam = f;
 }
 
+/**
+ * Draws the point at the given location. If foam is enabled, calculates whether
+ * to color the point white based on the displacement of the point from its
+ * original position.
+ * @param x The x location of the point to draw
+ * @param z The z location of the point to draw
+ */
 void FFTWaves::drawPoint(const float& x, const float& z)
 {
     static Vector3 upVector(0,1,0);
 
+    // calculate column within vector to get
     int n = floor(fmod(x, length) / facetLength);
     float tile_x = floor(x / length) * length;
 
+    // calculate row within vector to get
     int m = floor(fmod(z, length) / facetLength);
     float tile_z = floor(z / length) * length;
 
+    // get point from vector
     WaveVertex node = vertices[m * N + n];
 
+    // color foam if it's enabled and the displacement of this point is high enough
     if (foam && node.vertex.y > node.originalPos.y && (node.vertex - node.originalPos).length() > 6.0f)
     {
         glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -258,10 +269,23 @@ void FFTWaves::drawPoint(const float& x, const float& z)
         glColor4f(wavesR, wavesG, wavesB, wavesA);
     }
 
+    // draw normal
     glNormal3f(node.normal.x, node.normal.y, node.normal.z);
+    // draw point
     glVertex3f(node.vertex.x + tile_x, node.vertex.y, node.vertex.z + tile_z);
 }
 
+/**
+ * Draws a square of the wave animation, optionally stitching the geometry at
+ * the mid point of the given side.
+ * @param x The x value of the top left corner of the square
+ * @param z The z value of the top left corner of the square
+ * @param size The side length of the square
+ * @param stitchX Whether to stitch the left or right size of the square.
+ *                -1: left, 0: none, 1: right
+ * @param stitchY Whether to stitch the top or bottom size of the square.
+ *                -1: left, 0: none, 1: right
+ */
 void FFTWaves::drawSquare(const float& x, const float& z, float size, signed char stitchX, signed char stitchZ)
 {
     if (stitchX == 0 && stitchZ == 0)     //   no stitching
@@ -323,6 +347,13 @@ void FFTWaves::drawSquare(const float& x, const float& z, float size, signed cha
     }
 }
 
+/**
+ * Draws the wave animation in the current frame.
+ * @param centerX The x value of the center of the animation
+ * @param centerZ The z value of the center of the animation
+ * @param numLods How many levels of detail will be rendered
+ * @param lodLength How many rows of squares are in each LOD level
+ */
 void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength)
 {
     unsigned short maxSize = pow(2, numLods);
@@ -346,7 +377,7 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength)
 
     unsigned short numStitches = maxStitches;
 
-    // draw lods from center, "spiraling" out
+    // draw LODs from center, "spiraling" out
     glBegin(GL_TRIANGLES);
     drawSquare(loc_x, loc_z, stepSize * facetLength, 0, 0);
     while (!done)
@@ -420,7 +451,7 @@ void FFTWaves::draw(double centerX, double centerZ, int numLods, int lodLength)
         dir *= -1;
     }
 
-    // draw edge pieces
+    // draw skirt geometry
     for (i = 0; i <= steps; i++)
     {
         loc_x = centerX + (i - steps / 2) * stepSize * facetLength;
