@@ -2,9 +2,10 @@
 
 # Description
 
-Compute-based ocean water rendering project using OpenGL 1.1 for Baylor CSI 4341 (Computer Graphics w/ Dr. Poore) Final Project.
+Compute-based ocean water rendering project using OpenGL 1.1.
 
-Wave field generated with Keith Lantz's implementation of Jerry Tessendorf's fast fourier transform technique and using my approach to dynamic, gaze-based LOD, including shape connection and skirt geometry.
+Wave field generated with Keith Lantz's implementation of Jerry Tessendorf's fast fourier transform technique.
+Uses my approach to dynamic, gaze-based LOD, including shape connection and skirt geometry.
 
 # References
 
