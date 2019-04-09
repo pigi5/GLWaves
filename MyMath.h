@@ -1,6 +1,6 @@
 /**
  * Author: Ford Hash
- * Date Modified: 12/5/17
+ * Last Modified: 12/5/2017
  */
 
 #ifndef MYMATH_H
@@ -12,29 +12,35 @@
 
 #define PI 3.1415926535897932384626433832795028841971693993751058209749445923
 
-class Complex {
+class Complex
+{
 public:
-	GLfloat real, imaginary;
-    Complex() {
+    GLfloat real, imaginary;
+    Complex()
+    {
         real = 0.0f;
         imaginary = 0.0f;
     }
-    Complex(GLfloat r, GLfloat i) {
+    Complex(GLfloat r, GLfloat i)
+    {
         real = r;
         imaginary = i;
     }
-    Complex(const Complex& c) {
+    Complex(const Complex& c)
+    {
         real = c.real;
         imaginary = c.imaginary;
     }
 
-    Complex& operator= (const Complex c) {
+    Complex& operator= (const Complex c)
+    {
         real = c.real;
         imaginary = c.imaginary;
         return *this;
     };
 
-    Complex conj() {
+    Complex conj()
+    {
         Complex t;
         t.real = real;
         t.imaginary = -imaginary;
@@ -42,28 +48,32 @@ public:
     }
 };
 
-inline Complex operator+(const Complex& c1, const Complex& c2) {
+inline Complex operator+(const Complex& c1, const Complex& c2)
+{
     Complex t;
     t.real = c1.real + c2.real;
     t.imaginary = c1.imaginary + c2.imaginary;
     return t;
 };
 
-inline Complex operator-(const Complex& c1, const Complex& c2) {
+inline Complex operator-(const Complex& c1, const Complex& c2)
+{
     Complex t;
     t.real = c1.real - c2.real;
     t.imaginary = c1.imaginary - c2.imaginary;
     return t;
 };
 
-inline Complex operator*(const Complex& c1, const Complex& c2) {
+inline Complex operator*(const Complex& c1, const Complex& c2)
+{
     Complex t;
     t.real = c1.real * c2.real - c1.imaginary * c2.imaginary;
     t.imaginary = c1.real * c2.imaginary + c1.imaginary * c2.real;
     return t;
 };
 
-inline Complex operator*(const Complex& c, const GLfloat& f) {
+inline Complex operator*(const Complex& c, const GLfloat& f)
+{
     Complex t;
     t.real = c.real * f;
     t.imaginary = c.imaginary * f;
@@ -72,37 +82,45 @@ inline Complex operator*(const Complex& c, const GLfloat& f) {
 
 class Vector3;
 
-class Vector2 {
+class Vector2
+{
 public:
-	GLfloat x, z;
-    Vector2() {
+    GLfloat x, z;
+    Vector2()
+    {
         x = 0.0f;
         z = 0.0f;
     }
-    Vector2(GLfloat a, GLfloat c) {
+    Vector2(GLfloat a, GLfloat c)
+    {
         x = a;
         z = c;
     }
-    Vector2(const Vector2& v) {
+    Vector2(const Vector2& v)
+    {
         x = v.x;
         z = v.z;
     }
     Vector2(const Vector3& v);
 
-    Vector2& operator= (const Vector2 v) {
+    Vector2& operator= (const Vector2 v)
+    {
         x = v.x;
         z = v.z;
         return *this;
     };
 
-    GLfloat length() {
+    GLfloat length()
+    {
         return sqrt(x * x + z * z);
     }
 
-    Vector2 unit() {
+    Vector2 unit()
+    {
         Vector2 t;
         GLfloat len = length();
-        if (len != 0) {
+        if (len != 0)
+        {
             t.x = x / len;
             t.z = z / len;
         }
@@ -110,81 +128,96 @@ public:
     }
 };
 
-inline Vector2 operator*(const float& c, const Vector2& v) {
+inline Vector2 operator*(const float& c, const Vector2& v)
+{
     Vector2 t;
     t.x = v.x * c;
     t.z = v.z * c;
     return t;
 };
 
-inline Vector2 operator+(const Vector2& v1, const Vector2& v2) {
+inline Vector2 operator+(const Vector2& v1, const Vector2& v2)
+{
     Vector2 t;
     t.x = v1.x + v2.x;
     t.z = v1.z + v2.z;
     return t;
 };
 
-inline Vector2 operator- (const Vector2 v) {
+inline Vector2 operator- (const Vector2 v)
+{
     Vector2 t;
     t.x = -v.x;
     t.z = -v.z;
     return t;
 };
 
-inline GLfloat dot(const Vector2& v1, const Vector2& v2) {
+inline GLfloat dot(const Vector2& v1, const Vector2& v2)
+{
     return v1.x * v2.x +  v1.z * v2.z;
 };
 
-class Vector3 {
+class Vector3
+{
 public:
-	GLfloat x, y, z;
-    Vector3() {
+    GLfloat x, y, z;
+    Vector3()
+    {
         x = 0.0f;
         y = 0.0f;
         z = 0.0f;
     }
-    Vector3(GLfloat a, GLfloat b, GLfloat c) {
+    Vector3(GLfloat a, GLfloat b, GLfloat c)
+    {
         x = a;
         y = b;
         z = c;
     }
-    Vector3(const Vector3& v) {
+    Vector3(const Vector3& v)
+    {
         x = v.x;
         y = v.y;
         z = v.z;
     }
 
-    Vector3& operator= (const Vector3 v) {
+    Vector3& operator= (const Vector3 v)
+    {
         x = v.x;
         y = v.y;
         z = v.z;
         return *this;
     };
 
-    void setXZ(const Vector3& original, const Vector2& disp) {
+    void setXZ(const Vector3& original, const Vector2& disp)
+    {
         x = original.x + disp.x;
         z = original.z + disp.z;
     }
 
-    GLfloat length() {
+    GLfloat length()
+    {
         return sqrt(x * x + y * y + z * z);
     }
 
-    Vector3 unit() {
+    Vector3 unit()
+    {
         double len = length();
-        if (len != 0) {
+        if (len != 0)
+        {
             return Vector3(x / len, y / len, z / len);
         }
         return Vector3();
     }
 };
 
-inline Vector2::Vector2(const Vector3& v) {
+inline Vector2::Vector2(const Vector3& v)
+{
     x = v.x;
     z = v.z;
 }
 
-inline Vector3 operator+(const Vector3& v1, const Vector3& v2) {
+inline Vector3 operator+(const Vector3& v1, const Vector3& v2)
+{
     Vector3 t;
     t.x = v1.x + v2.x;
     t.y = v1.y + v2.y;
@@ -192,7 +225,8 @@ inline Vector3 operator+(const Vector3& v1, const Vector3& v2) {
     return t;
 };
 
-inline Vector3 operator-(const Vector3& v1, const Vector3& v2) {
+inline Vector3 operator-(const Vector3& v1, const Vector3& v2)
+{
     Vector3 t;
     t.x = v1.x - v2.x;
     t.y = v1.y - v2.y;
@@ -201,26 +235,30 @@ inline Vector3 operator-(const Vector3& v1, const Vector3& v2) {
 };
 
 
-struct WaveVertex {
-	Vector3 vertex;
-	Vector3 normal;
-	Complex hTilde0;
-	Complex hTilde0star;
-	Vector3 originalPos;
+struct WaveVertex
+{
+    Vector3 vertex;
+    Vector3 normal;
+    Complex hTilde0;
+    Complex hTilde0star;
+    Vector3 originalPos;
 };
 
-struct HeightDispNorm {
-	Complex height;
-	Vector2 displacement;
-	Vector3 normal;
+struct HeightDispNorm
+{
+    Complex height;
+    Vector2 displacement;
+    Vector3 normal;
 
-    HeightDispNorm() {
+    HeightDispNorm()
+    {
         height = Complex();
         displacement = Vector2();
         normal = Vector3();
     }
 
-    HeightDispNorm(Complex h, Vector2 d, Vector3 n) {
+    HeightDispNorm(Complex h, Vector2 d, Vector3 n)
+    {
         height = h;
         displacement = d;
         normal = n;
@@ -229,22 +267,27 @@ struct HeightDispNorm {
 
 
 // taken from Lantz's helper classes
-inline float uniformRandomVariable() {
-	return (float)rand()/RAND_MAX;
+inline float uniformRandomVariable()
+{
+    return (float)rand()/RAND_MAX;
 }
 // taken from Lantz's helper classes
-inline Complex gaussianRandomVariable() {
-	float x1, x2, w;
-	do {
-	    x1 = 2.f * uniformRandomVariable() - 1.f;
-	    x2 = 2.f * uniformRandomVariable() - 1.f;
-	    w = x1 * x1 + x2 * x2;
-	} while ( w >= 1.f );
-	w = sqrt((-2.f * log(w)) / w);
-	return Complex(x1 * w, x2 * w);
+inline Complex gaussianRandomVariable()
+{
+    float x1, x2, w;
+    do
+    {
+        x1 = 2.f * uniformRandomVariable() - 1.f;
+        x2 = 2.f * uniformRandomVariable() - 1.f;
+        w = x1 * x1 + x2 * x2;
+    }
+    while ( w >= 1.f );
+    w = sqrt((-2.f * log(w)) / w);
+    return Complex(x1 * w, x2 * w);
 }
 
-inline float roundToMultiple(const float& num, const float& mult) {
+inline float roundToMultiple(const float& num, const float& mult)
+{
     return round(num / mult) * mult;
 }
 

@@ -1,16 +1,15 @@
-/****************************************************************************
-
-Name: Ford Hash
-CSI 4341: Assignment 2: Camera
-
-****************************************************************************/
+/**
+ * Author: Ford Hash
+ * Last Modified: 12/7/2017
+ */
 
 #ifndef CAMERA_H
 #define CAMERA_H
 
 #include "Algebra.h"
 
-class Camera {
+class Camera
+{
 private:
     Point eye;
     Vector look;
@@ -40,10 +39,10 @@ public:
     Matrix GetModelViewMatrix();
     Matrix getInverseNormalizationMatrix();
     void computeInverseNormalizationMatrix();
-    
+
     void CreateProjectionMatrix();
     void CreateModelViewMatrix();
-    
+
     void RotateV(double angle);
     void RotateU(double angle);
     void RotateW(double angle);

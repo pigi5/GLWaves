@@ -1,6 +1,6 @@
-/*
- *  Author: Ford Hash
- *  Description: Assignment 4 - Non-recursive ray-tracer
+/**
+ * Author: Ford Hash
+ * Last Modified: 12/7/2017
  */
 
 #include "Camera.h"
@@ -63,7 +63,7 @@ void Camera::CreateProjectionMatrix() {
                  0, 0, 1/farPlane, 0,
                  0, 0, 0, 1);
     projectionMatrix = unhinge * scale;
-    
+
     parallelProjectionMatrix = Matrix(2/screenWidth, 0, 0, 0,
                               0, 2/screenHeight, 0, 0,
                               0, 0, 1/farPlane, 0,
@@ -127,7 +127,7 @@ void Camera::CreateModelViewMatrix() {
     wVector = normalize(-look);
     uVector = normalize(cross(up, wVector));
     vVector = cross(wVector, uVector);
-    
+
     Matrix rot = rot_mat(vVector, vRot) * rot_mat(uVector, uRot) * rot_mat(wVector, wRot);
 
     wVector = rot * wVector;
@@ -172,7 +172,7 @@ void Camera::Translate(const Vector &v) {
 
 void Camera::Rotate(Point p, Vector axis, double degrees) {
     Matrix rot = rot_mat(p, axis, DEG_TO_RAD(degrees));
-    
+
     eye = rot * eye;
     look = rot * look;
     up = rot * up;
